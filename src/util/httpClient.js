@@ -23,7 +23,7 @@ export const authorize = async (code) => {
     }
 };
 
-export const upload = async (token, bank, file) => {
+export const upload = async (bank, file) => {
     const formData = new FormData();
     formData.append('bank', bank);
     formData.append('statement', file);
@@ -31,7 +31,6 @@ export const upload = async (token, bank, file) => {
         const response = await axios.post(`${baseURL}/api/v1/upload`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
-                'Authorization': token,
             }
         });
         if (response && response.data && response.data.data) {
@@ -81,7 +80,7 @@ export const createExpenses = async (rawExpenseList) => {
     const payload = rawExpenseList.map(expense => {
         return {
             'group_id': expense.groupId,
-            'description': `${expense.mode}: ${expense.transferred_to}`,
+            'description': `${expense.mode}: ${expense.transferred_to.name}`,
             'cost': expense.amount.toString(),
             'category_id': expense.categoryId,
             'date': expense.transaction_date,
