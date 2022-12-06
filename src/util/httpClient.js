@@ -14,8 +14,8 @@ export const authorize = async (code) => {
             code: code,
         });
         const data = response.data;
-        if (data && data.user) {
-            return data.user;
+        if (data && data.user && data.token) {
+            return data;
         }
         return null;
     } catch (err) {
@@ -42,11 +42,13 @@ export const upload = async (bank, file) => {
     }
 };
 
-export const fetchGroups = async () => {
+export const fetchGroups = async (token) => {
     try {
+        console.log(token);
         const response = await axios.get(`${baseURL}/api/v1/groups`, {
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': token,
             }
         });
         if (response && response.data) {
@@ -59,11 +61,12 @@ export const fetchGroups = async () => {
     }
 };
 
-export const fetchCategories = async () => {
+export const fetchCategories = async (token) => {
     try {
         const response = await axios.get(`${baseURL}/api/v1/categories`, {
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': token,
             }
         });
         if (response && response.data) {
@@ -76,7 +79,7 @@ export const fetchCategories = async () => {
     }
 };
 
-export const createExpenses = async (rawExpenseList) => {
+export const createExpenses = async (rawExpenseList, token) => {
     const payload = rawExpenseList.map(expense => {
         return {
             'group_id': expense.groupId,
@@ -92,6 +95,7 @@ export const createExpenses = async (rawExpenseList) => {
         }, {
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': token,
             }
         });
         if (response && response.data) {

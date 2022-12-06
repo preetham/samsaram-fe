@@ -24,15 +24,23 @@ import { UploadSection } from '../components/UploadSection';
 import { Loader } from '../components/Loader';
 import { ChartSection } from '../components/ChartSection';
 import { TitleBar } from '../components/TitleBar';
+import { reducer } from '../util/stateManager';
+
+const initialState = {
+    isAuthenticated: false,
+    user: null,
+    token: null,
+    groups: [],
+    categories: [],
+    rows: [],
+};
 
 const Home = () => {
-    const [user, setUser] = React.useState(null);
+    const [state, dispatch] = React.useReducer(reducer, initialState);
     const [bank, setBank] = React.useState('');
     const [selectedRows, setSelectedRows] = React.useState(null);
     const [selectedGroup, setSelectedGroup] = React.useState('');
     const [selectedCategory, setSelectedCategory] = React.useState('');
-    const [groups, setGroups] = React.useState(null);
-    const [categories, setCategories] = React.useState(null);
     const [categoryMap, setCategoryMap] = React.useState({});
     const [categoryCount, setCategoryCount] = React.useState([]);
     const [paymentPie, setPaymentPie] = React.useState([]);
@@ -40,7 +48,6 @@ const Home = () => {
     const [anchorElUser, setAnchorElUser] = React.useState(null);
     const [openSnackBar, setOpenSnackBar] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
-    const [rows, setRows] = React.useState([]);
     const [severity, setSeverity] = React.useState('info');
     const [alertMessage, setAlertMessage] = React.useState('');
 
@@ -94,12 +101,15 @@ const Home = () => {
         if (!e.target.files || e.target.files.length === 0) {
             return;
         }
-        if (!user || !bank) {
+        if (!state.user || !bank) {
             return;
         }
         setLoading(true);
         upload(bank, e.target.files[0]).then((data) => {
-            setRows(data);
+            dispatch({
+                type: "SET_ROWS",
+                payload: data,
+            });
             setPaymentPie(calculatePaymentModes(data));
             setpTypePie(calculatePaymentReceivers(data));
             setCategoryCount(getCategoryCount(data));
@@ -124,10 +134,9 @@ const Home = () => {
     };
 
     const handleLogout = () => {
-        setUser(null);
-        setRows([]);
-        setGroups(null);
-        setCategories(null);
+        dispatch({
+            type: "LOGOUT",
+        });
     };
 
     const handleRowSelection = (selectedRowIds, details) => {
@@ -137,7 +146,7 @@ const Home = () => {
     const handleExpenseSelect = (e) => {
         setLoading(true);
         const idSet = new Set(selectedRows);
-        const filteredRows = rows.filter((row) => {
+        const filteredRows = state.rows.filter((row) => {
             return idSet.has(row.description);
         });
         const payload = filteredRows.map((row) => {
@@ -149,7 +158,7 @@ const Home = () => {
             }
             return row;
         });
-        createExpenses(payload)
+        createExpenses(payload, state.token)
             .then((data) => {
                 setLoading(false);
                 setSeverity('success');
@@ -179,35 +188,96 @@ const Home = () => {
     React.useEffect(() => {
         setLoading(true);
         const code = searchParams.get('code');
-        if (!code || code.length === 0) {
-            setUser(null);
+        const tokenStr = localStorage.getItem("token");
+        const userStr = localStorage.getItem("user");
+        let token;
+        let user;
+        try {
+            token = JSON.parse(tokenStr);
+            user = JSON.parse(userStr);
+        } catch (err) {
             setLoading(false);
+            setSeverity('info');
+            setAlertMessage('Please Login!');
+            setOpenSnackBar(true);
+        }
+        if (token && token.length > 0 && user && user.id) {
+            dispatch({
+                type: "LOGIN",
+                payload: {
+                    token: token,
+                    user: user
+                }
+            });
+            setLoading(false);
+            if (state.groups.length === 0) {
+                fetchGroups(state.token).then((data) => {
+                    dispatch({
+                        type: "SET_GROUPS",
+                        payload: data,
+                    });
+                    setLoading(false);
+                });
+            }
+            if (state.categories.length === 0) {
+                fetchCategories(state.token).then((data) => {
+                    dispatch({
+                        type: "SET_CATEGORIES",
+                        payload: data,
+                    })
+                    setCategoryMap(generateCategoryMap(data));
+                    setLoading(false);
+                });
+            }
             return;
         }
-        if (!user) {
+        if (!state.user || !state.isAuthenticated) {
+            if (!code || code.length === 0) {
+                return;
+            }
             authorize(code)
                 .then((userData) => {
                     if (!userData) {
-                        setUser(null);
                         setLoading(false);
+                        setSeverity('error');
+                        setAlertMessage('Invalid Login!');
+                        setOpenSnackBar(true);
                         return;
                     }
-                    setUser(userData);
-                    fetchGroups().then((data) => setGroups(data));
-                    fetchCategories().then((data) => {
-                        setCategories(data);
-                        setCategoryMap(generateCategoryMap(data));
-                        setLoading(false);
+                    dispatch({
+                        type: "LOGIN",
+                        payload: userData,
                     });
+                    if (state.groups.length === 0) {
+                        fetchGroups(state.token).then((data) => {
+                            dispatch({
+                                type: "SET_GROUPS",
+                                payload: data,
+                            });
+                            setLoading(false);
+                        });
+                    }
+                    if (state.categories.length === 0) {
+                        fetchCategories(state.token).then((data) => {
+                            dispatch({
+                                type: "SET_CATEGORIES",
+                                payload: data,
+                            })
+                            setCategoryMap(generateCategoryMap(data));
+                        });
+                    }
+                    setLoading(false);
                 })
                 .catch((err) => {
                     console.err(err.data);
                     setLoading(false);
-                    setUser(null);
+                    setSeverity('error');
+                    setAlertMessage('Invalid Login!');
+                    setOpenSnackBar(true);
                     return;
                 });
         }
-    }, [searchParams, user]);
+    }, []);
 
     const columns = [
         { field: 'transaction_date', headerName: 'Transaction Date', width: 200 },
@@ -254,15 +324,15 @@ const Home = () => {
                 title='Samsaram'
                 login={login}
                 loading={loading}
-                user={user}
+                user={state.user}
                 anchorElUser={anchorElUser}
                 handleOpenUserMenu={handleOpenUserMenu}
                 handleCloseUserMenu={handleCloseUserMenu}
                 handleLogout={handleLogout}
             />
             <Grid container style={{ marginTop: '5rem' }}>
-                {user && groups && groups.length > 0 &&
-                    categories && categories.length > 0 &&
+                {state.isAuthenticated && !loading && state.groups && state.groups.length > 0 &&
+                    state.categories && state.categories.length > 0 &&
                     <UploadSection
                         changeBank={changeBank}
                         bank={bank}
@@ -281,14 +351,15 @@ const Home = () => {
                         categoryCount={categoryCount}
                     />
                 }
-                {user && groups && groups.length > 0 && rows && rows.length > 0 &&
+                {state.isAuthenticated && state.groups && state.groups.length > 0 &&
+                    state.rows && state.rows.length > 0 &&
                     <Grid container style={{ marginTop: '2rem' }}>
                         <Grid item sm={12}>
                             <ExpenseTable
-                                rows={rows}
+                                rows={state.rows}
                                 columns={columns}
-                                categories={categories}
-                                groups={groups}
+                                categories={state.categories}
+                                groups={state.groups}
                                 selectedCategory={selectedCategory}
                                 selectedGroup={selectedGroup}
                                 handleGroupChange={handleGroupChange}
