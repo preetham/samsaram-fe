@@ -209,9 +209,9 @@ const Home = () => {
                     user: user
                 }
             });
-            setLoading(false);
             if (state.groups.length === 0) {
-                fetchGroups(state.token).then((data) => {
+                console.log(state);
+                fetchGroups(token || state.token).then((data) => {
                     dispatch({
                         type: "SET_GROUPS",
                         payload: data,
@@ -219,8 +219,9 @@ const Home = () => {
                     setLoading(false);
                 });
             }
+            setLoading(true);
             if (state.categories.length === 0) {
-                fetchCategories(state.token).then((data) => {
+                fetchCategories(token || state.token).then((data) => {
                     dispatch({
                         type: "SET_CATEGORIES",
                         payload: data,
@@ -229,6 +230,7 @@ const Home = () => {
                     setLoading(false);
                 });
             }
+            setLoading(false);
             return;
         }
         if (!state.user || !state.isAuthenticated) {
@@ -249,7 +251,7 @@ const Home = () => {
                         payload: userData,
                     });
                     if (state.groups.length === 0) {
-                        fetchGroups(state.token).then((data) => {
+                        fetchGroups(token || userData.token).then((data) => {
                             dispatch({
                                 type: "SET_GROUPS",
                                 payload: data,
@@ -258,7 +260,7 @@ const Home = () => {
                         });
                     }
                     if (state.categories.length === 0) {
-                        fetchCategories(state.token).then((data) => {
+                        fetchCategories(token || userData.token).then((data) => {
                             dispatch({
                                 type: "SET_CATEGORIES",
                                 payload: data,
