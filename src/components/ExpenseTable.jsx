@@ -1,6 +1,6 @@
 import React from "react";
 import { DataGrid, GridToolbarContainer } from "@mui/x-data-grid";
-import { FormControl, InputLabel, Select, Button, Box, MenuItem } from "@mui/material";
+import { FormControl, InputLabel, Select, Button, Box, MenuItem, CircularProgress, Backdrop } from "@mui/material";
 
 export const ExpenseTable = ({
     rows,
@@ -9,6 +9,7 @@ export const ExpenseTable = ({
     groups,
     selectedCategory,
     selectedGroup,
+    openLoader,
     handleGroupChange,
     handleCategoryChange,
     handleExpenseSelect,
@@ -53,12 +54,18 @@ export const ExpenseTable = ({
     };
     return (
         <Box style={{ width: '100%', display: 'flex', flexGrow: 1 }}>
+            <Backdrop open={openLoader} sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+                <CircularProgress color="inherit"/>
+            </Backdrop>
             <DataGrid
                 autoHeight
                 rows={rows}
                 columns={columns}
                 pageSize={10}
                 rowsPerPageOptions={[10]}
+                columnVisibilityModel={{
+                    description: false,
+                }}
                 getRowId={(row) => row.description}
                 checkboxSelection
                 onSelectionModelChange={handleRowSelection}

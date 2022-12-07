@@ -48,6 +48,7 @@ const Home = () => {
     const [anchorElUser, setAnchorElUser] = React.useState(null);
     const [openSnackBar, setOpenSnackBar] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
+    const [expenseLoading, setExpenseLoading] = React.useState(false);
     const [severity, setSeverity] = React.useState('info');
     const [alertMessage, setAlertMessage] = React.useState('');
 
@@ -144,7 +145,7 @@ const Home = () => {
     };
 
     const handleExpenseSelect = (e) => {
-        setLoading(true);
+        setExpenseLoading(true);
         const idSet = new Set(selectedRows);
         const filteredRows = state.rows.filter((row) => {
             return idSet.has(row.description);
@@ -160,7 +161,13 @@ const Home = () => {
         });
         createExpenses(payload, state.token)
             .then((data) => {
-                setLoading(false);
+                setExpenseLoading(false);
+                if (!data || data.length === 0) {
+                    setSeverity('error');
+                    setAlertMessage('Error adding to Splitwise!');
+                    setOpenSnackBar(true);
+                    return;
+                }
                 setSeverity('success');
                 setAlertMessage('Successfully added to Splitwise!');
                 setOpenSnackBar(true);
@@ -291,15 +298,16 @@ const Home = () => {
             sortComparator: paidToComparator,
             renderCell: (params) => (
                 <>
-                    {params.value && params.value.logo && params.value.name && (
-                        <Image fit='contain' height='1.4rem' src={params.value.logo} />
-                    )}
-                    {params.value && params.value.name && !params.value.logo && (
+                    {params.value && params.value.logo && params.value.name &&
+                        <Image fit='contain' height='1.4rem' alt={params.row.description} src={params.value.logo} />
+                    }
+                    {params.value && params.value.name && !params.value.logo &&
                         <Typography variant='body2'>{params.value.name}</Typography>
-                    )}
+                    }
                 </>
             ),
         },
+        { field: 'description', headerName: 'Description', width: 150 },
         { field: 'mode', headerName: 'Payment Mode', width: 150 },
         { field: 'amount', headerName: 'Amount', width: 150 },
         {
@@ -364,6 +372,7 @@ const Home = () => {
                                 groups={state.groups}
                                 selectedCategory={selectedCategory}
                                 selectedGroup={selectedGroup}
+                                openLoader={expenseLoading}
                                 handleGroupChange={handleGroupChange}
                                 handleCategoryChange={handleCategoryChange}
                                 handleExpenseSelect={handleExpenseSelect}
