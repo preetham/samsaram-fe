@@ -2,7 +2,7 @@
 
 import { ArrowUpRightIcon } from '@heroicons/react/24/outline';
 import { Budget } from '../types/Budget';
-import { formatNumber, calculatePercentage, setProgressBarColour } from '../util/common';
+import { formatNumber, calculatePercentage, setProgressBarColour } from '../common';
 
 export default function ExpenseCard({ title, budget }: { title: string, budget: Budget }) {
   return (
